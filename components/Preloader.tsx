@@ -7,7 +7,7 @@ const Preloader = () => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    // Lock scroll while preloading
+    // Lock scroll
     document.body.style.overflow = 'hidden';
     
     const interval = setInterval(() => {
@@ -16,14 +16,14 @@ const Preloader = () => {
           clearInterval(interval);
           setTimeout(() => {
             setIsVisible(false);
-            // Unlock scroll after transition completes
+            // Unlock scroll
             document.body.style.overflow = '';
-          }, 1000); 
+          }, 800); 
           return 100;
         }
-        return prev + Math.floor(Math.random() * 8) + 1;
+        return prev + Math.floor(Math.random() * 12) + 2;
       });
-    }, 50);
+    }, 40);
 
     return () => {
       clearInterval(interval);
@@ -35,13 +35,33 @@ const Preloader = () => {
 
   return (
     <div 
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#1c1c1c] text-[#f5f5f0] transition-transform duration-[1000ms] ease-[cubic-bezier(0.87,0,0.13,1)] ${percent === 100 ? '-translate-y-full' : 'translate-y-0'}`}
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#fbfaf6] text-[#2b2b29] transition-transform duration-[1200ms] ease-[cubic-bezier(0.85,0,0.15,1)] ${percent === 100 ? '-translate-y-full' : 'translate-y-0'}`}
     >
-      <div className="text-center space-y-6">
-        <div className="text-xs font-bold tracking-[0.5em] uppercase opacity-40">Intelligence System Active</div>
-        <div className="text-8xl md:text-[12rem] font-bold tabular-nums tracking-tighter leading-none">
-          {percent.toString().padStart(3, '0')}
+      <div className="relative text-center">
+        {/* SVG Logo from Bundle */}
+        <div className="mb-8 opacity-10">
+          <svg width="200" height="130" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+            <text x="120" y="430" font-family="Georgia, serif" font-size="300" font-weight="500" letter-spacing="-12" fill="#2b2b29">
+              T<tspan font-style="italic" fill="#b5793c">&amp;</tspan>I
+            </text>
+          </svg>
         </div>
+        
+        <div className="text-[10px] font-bold tracking-[0.6em] uppercase opacity-40 mb-2">Unpacking Intelligence</div>
+        <div className="text-9xl md:text-[14rem] font-bold tabular-nums tracking-tighter leading-none mb-4">
+          {percent.toString().padStart(2, '0')}
+        </div>
+        <div className="w-64 h-[1px] bg-brand-black/10 mx-auto overflow-hidden relative">
+          <div 
+            className="absolute inset-0 bg-brand-black transition-transform duration-300 ease-out" 
+            style={{ transform: `translateX(${-100 + percent}%)` }}
+          />
+        </div>
+      </div>
+      
+      {/* Footer text for preloader */}
+      <div className="absolute bottom-10 font-mono text-[10px] tracking-widest uppercase opacity-20">
+        Taste & Intelligence © 2026
       </div>
     </div>
   );

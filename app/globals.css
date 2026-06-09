@@ -2,12 +2,14 @@
 
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "Georgia", serif;
   
-  --color-brand-black: #0a0a0a;
+  --color-brand-black: #2b2b29;
   --color-brand-charcoal: #1c1c1c;
-  --color-brand-beige: #f5f5f0;
-  --color-brand-muted: #737373;
-  --color-brand-border: rgba(0, 0, 0, 0.08);
+  --color-brand-beige: #fbfaf6;
+  --color-brand-accent: #b5793c;
+  --color-brand-muted: #666666;
+  --color-brand-border: rgba(43, 43, 41, 0.08);
   
   --radius-3xl: 24px;
 }
@@ -16,35 +18,30 @@
   body {
     @apply bg-brand-beige text-brand-black font-sans antialiased selection:bg-brand-black selection:text-brand-beige;
   }
+  
+  h1, h2, h3 {
+    @apply tracking-tighter leading-none;
+  }
 }
 
 @layer utilities {
-  .animate-slide-left {
-    animation: slide-left 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
-  }
-
-  @keyframes slide-left {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  .animate-reveal {
-    animation: reveal-up 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  .reveal {
+    animation: reveal-up 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
 
   @keyframes reveal-up {
     from {
       opacity: 0;
-      transform: translateY(40px);
+      transform: translateY(60px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  .btn-primary {
+    @apply px-8 py-4 bg-brand-black text-white rounded-3xl font-bold hover:scale-105 active:scale-95 transition-all duration-300;
   }
 }
