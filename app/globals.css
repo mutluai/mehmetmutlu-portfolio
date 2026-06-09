@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  
+  --color-lab-black: #1a1a1a;
+  --color-lab-charcoal: #2b2b29;
+  --color-lab-beige: #fbfaf6;
+  --color-lab-muted: #918989;
+  --color-lab-border: rgba(145, 137, 137, 0.2);
+  
+  --radius-3xl: 24px;
+}
+
+@layer base {
+  body {
+    @apply bg-lab-beige text-lab-charcoal font-sans antialiased selection:bg-lab-charcoal selection:text-lab-beige;
+  }
+}
+
+@layer components {
+  .bento-card {
+    @apply bg-white border border-lab-border rounded-3xl p-8 transition-all duration-500 hover:shadow-xl hover:-translate-y-1;
+  }
+  
+  .btn-lab {
+    @apply inline-flex items-center justify-center px-8 py-4 bg-lab-charcoal text-lab-beige rounded-3xl font-medium transition-all hover:bg-lab-black hover:scale-[1.02] active:scale-[0.98];
+  }
+  
+  .section-label {
+    @apply text-[10px] uppercase tracking-[0.2em] font-bold text-lab-muted mb-4 block;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-lab-charcoal to-lab-muted;
+  }
+}
