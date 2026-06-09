@@ -2,37 +2,36 @@ import React from 'react';
 
 const About = () => {
   return (
-    <section id="about" className="py-32 px-6 max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-        <div className="space-y-8">
-          <span className="section-label">Founding Philosophy</span>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-            Execution is free. <br /> Judgment is everything.
+    <section id="philosophy" className="py-40 px-6 max-w-7xl mx-auto border-t border-brand-border">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+        <div className="space-y-10 reveal">
+          <span className="section-label">Philosophy</span>
+          <h2 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[0.9]">
+            The New Canvas is <br /> Intelligence.
           </h2>
-          <p className="text-lg text-lab-muted leading-relaxed">
-            I build at the frontier of creative evaluation. In a world where AI can execute 
-            infinitely, the value shifts to the human taste that directs it. My work 
-            focuses on capturing that taste and baking it into autonomous systems.
+          <p className="text-xl text-brand-muted leading-relaxed font-medium">
+            At Consciouslab, I treat artificial intelligence not as a tool, but as a medium. 
+            By combining AI-coding expertise with high-signal creative taste, I bridge 
+            the gap between technical execution and artistic intent.
           </p>
-          <div className="grid grid-cols-3 gap-8 pt-8">
+          <div className="grid grid-cols-2 gap-12 pt-10">
             <div>
-              <div className="text-3xl font-bold mb-1">14+</div>
-              <div className="text-xs font-bold text-lab-muted uppercase tracking-widest">Awards</div>
+              <div className="text-5xl font-bold mb-2 tracking-tighter">14+</div>
+              <div className="text-xs font-black text-brand-muted uppercase tracking-[0.4em]">Creative Awards</div>
             </div>
             <div>
-              <div className="text-3xl font-bold mb-1">50+</div>
-              <div className="text-xs font-bold text-lab-muted uppercase tracking-widest">Evals</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold mb-1">∞</div>
-              <div className="text-xs font-bold text-lab-muted uppercase tracking-widest">Taste</div>
+              <div className="text-5xl font-bold mb-2 tracking-tighter">AI</div>
+              <div className="text-xs font-black text-brand-muted uppercase tracking-[0.4em]">First Design</div>
             </div>
           </div>
         </div>
-        <div className="aspect-square bg-lab-charcoal rounded-[40px] relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-tr from-lab-charcoal via-transparent to-lab-muted/20" />
-          <div className="absolute inset-0 flex items-center justify-center text-8xl transition-transform duration-700 group-hover:scale-110">
-            👁️‍🗨️
+        <div className="aspect-[4/5] bg-brand-charcoal rounded-[48px] relative overflow-hidden group reveal" style={{ animationDelay: '0.3s' }}>
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-charcoal via-transparent to-white/10" />
+          <div className="absolute inset-0 flex items-center justify-center text-[15rem] opacity-20 grayscale transition-transform duration-1000 group-hover:scale-110">
+            🎨
+          </div>
+          <div className="absolute bottom-12 left-12 right-12">
+             <p className="text-brand-beige/60 text-sm font-mono tracking-widest uppercase">Visual Reference // Consciouslab Studio</p>
           </div>
         </div>
       </div>

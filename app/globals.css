@@ -3,35 +3,47 @@
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
   
-  --color-lab-black: #1a1a1a;
-  --color-lab-charcoal: #2b2b29;
-  --color-lab-beige: #fbfaf6;
-  --color-lab-muted: #918989;
-  --color-lab-border: rgba(145, 137, 137, 0.2);
+  --color-brand-black: #0a0a0a;
+  --color-brand-charcoal: #1c1c1c;
+  --color-brand-beige: #f5f5f0;
+  --color-brand-muted: #737373;
+  --color-brand-border: rgba(0, 0, 0, 0.08);
   
   --radius-3xl: 24px;
 }
 
 @layer base {
   body {
-    @apply bg-lab-beige text-lab-charcoal font-sans antialiased selection:bg-lab-charcoal selection:text-lab-beige;
+    @apply bg-brand-beige text-brand-black font-sans antialiased selection:bg-brand-black selection:text-brand-beige;
   }
 }
 
 @layer components {
   .bento-card {
-    @apply bg-white border border-lab-border rounded-3xl p-8 transition-all duration-500 hover:shadow-xl hover:-translate-y-1;
+    @apply bg-white border border-brand-border rounded-3xl p-8 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:shadow-2xl hover:-translate-y-2;
   }
   
-  .btn-lab {
-    @apply inline-flex items-center justify-center px-8 py-4 bg-lab-charcoal text-lab-beige rounded-3xl font-medium transition-all hover:bg-lab-black hover:scale-[1.02] active:scale-[0.98];
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-4 bg-brand-black text-brand-beige rounded-3xl font-medium transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg;
   }
   
   .section-label {
-    @apply text-[10px] uppercase tracking-[0.2em] font-bold text-lab-muted mb-4 block;
+    @apply text-[11px] uppercase tracking-[0.3em] font-bold text-brand-muted mb-6 block;
   }
-  
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-lab-charcoal to-lab-muted;
+
+  .reveal {
+    animation: reveal-up 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    opacity: 0;
+  }
+
+  @keyframes reveal-up {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
