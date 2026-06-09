@@ -1,47 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-serif: "Georgia", serif;
-  
-  --color-brand-black: #2b2b29;
-  --color-brand-charcoal: #1c1c1c;
-  --color-brand-beige: #fbfaf6;
-  --color-brand-accent: #b5793c;
-  --color-brand-muted: #666666;
-  --color-brand-border: rgba(43, 43, 41, 0.08);
-  
-  --radius-3xl: 24px;
+--font-sans: "Inter", system-ui, sans-serif;
+--font-serif: "Georgia", serif;
+
+--color-brand-black: #2b2b29;
+--color-brand-charcoal: #2b2b29;
+--color-brand-beige: #fbfaf6;
+--color-brand-accent: #b5793c;
+--color-brand-muted: #666666;
+--color-brand-border: rgba(43, 43, 41, 0.08);
+
+--radius-3xl: 24px;
 }
 
 @layer base {
-  body {
-    @apply bg-brand-beige text-brand-black font-sans antialiased selection:bg-brand-black selection:text-brand-beige;
-  }
-  
-  h1, h2, h3 {
-    @apply tracking-tighter leading-none;
-  }
+body {
+@apply bg-brand-beige text-brand-black font-sans antialiased selection:bg-brand-black selection:text-brand-beige;
+}
+
+h1, h2, h3 {
+@apply tracking-tighter leading-none;
+}
 }
 
 @layer utilities {
-  .reveal {
-    animation: reveal-up 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-  }
+.reveal {
+animation: reveal-up 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+opacity: 0;
+}
 
-  @keyframes reveal-up {
-    from {
-      opacity: 0;
-      transform: translateY(60px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+@keyframes reveal-up {
+from {
+opacity: 0;
+transform: translateY(30px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
 
-  .btn-primary {
-    @apply px-8 py-4 bg-brand-black text-white rounded-3xl font-bold hover:scale-105 active:scale-95 transition-all duration-300;
-  }
+@keyframes slide-left {
+from {
+transform: translateX(100%);
+}
+to {
+transform: translateX(0);
+}
+}
+
+.animate-slide-left {
+animation: slide-left 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 }
