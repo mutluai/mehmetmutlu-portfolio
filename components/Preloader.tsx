@@ -41,8 +41,8 @@ const Preloader = () => {
         {/* SVG Logo from Bundle */}
         <div className="mb-8 opacity-10">
           <svg width="200" height="130" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-            <text x="120" y="430" font-family="Georgia, serif" font-size="300" font-weight="500" letter-spacing="-12" fill="#2b2b29">
-              T<tspan font-style="italic" fill="#b5793c">&amp;</tspan>I
+            <text x="120" y="430" fontFamily="Georgia, serif" fontSize="300" fontWeight="500" letterSpacing="-12" fill="#2b2b29">
+              T<tspan fontStyle="italic" fill="#b5793c">&amp;</tspan>I
             </text>
           </svg>
         </div>
@@ -51,9 +51,9 @@ const Preloader = () => {
         <div className="text-9xl md:text-[14rem] font-bold tabular-nums tracking-tighter leading-none mb-4">
           {percent.toString().padStart(2, '0')}
         </div>
-        <div className="w-64 h-[1px] bg-brand-black/10 mx-auto overflow-hidden relative">
+        <div className="w-64 h-[1px] bg-[#2b2b29]/10 mx-auto overflow-hidden relative">
           <div 
-            className="absolute inset-0 bg-brand-black transition-transform duration-300 ease-out" 
+            className="absolute inset-0 bg-[#2b2b29] transition-transform duration-300 ease-out" 
             style={{ transform: `translateX(${-100 + percent}%)` }}
           />
         </div>
