@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1714">
+<title>Hutbe Meali</title>
+<style>
+/* Tek ekran, karanlık: camide parlak ekran olmasın. Üstte Türkçe meal, altta Arapça canlı metin, en altta tek büyük düğme. */
+:root{
+  --bg:#0f1714; --panel:#16211d; --line:#26352f; --fg:#e8efe9; --muted:#8fa49a;
+  --gold:#c9a75a; --live:#e0c27a; --rec:#c2554a;
+  --tr:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --ar:"Geeza Pro","Noto Naskh Arabic","Traditional Arabic",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--tr);display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 8px}
+h1{font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin:0}
+#status{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+#dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+body.on #dot{background:var(--rec);animation:p 1.4s infinite}
+@keyframes p{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){body.on #dot{animation:none}}
+.lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+#trWrap{flex:1 1 60%;min-height:0;overflow-y:auto;padding-block:4px 12px}
+#tr p{font-size:19px;line-height:1.55;margin:0 0 12px}
+#tr p.live{color:var(--live);font-style:italic}
+#empty{color:var(--muted);font-size:16px;line-height:1.55}
+#arWrap{flex:0 0 22%;min-height:0;overflow-y:auto;border-top:1px solid var(--line);padding-block:10px}
+#ar{font-family:var(--ar);direction:rtl;text-align:right;font-size:17px;line-height:1.8;color:var(--muted)}
+#ar .i{color:var(--live)}
+#err{display:none;background:#3a1f1c;color:#f3cfc9;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.45;margin-bottom:8px}
+footer{display:flex;gap:10px;padding-block:10px 14px}
+button{font:inherit;border:0;border-radius:14px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#go{flex:1;background:var(--gold);color:#1a1408;font-size:18px;font-weight:700;padding:18px}
+body.on #go{background:var(--rec);color:#fff}
+#copy{background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:0 16px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Hutbe Meali</h1>
+  <div id="status"><span id="dot"></span><span id="st">Hazır</span></div>
+</header>
+<div id="err"></div>
+<div id="trWrap">
+  <p class="lbl">Türkçe</p>
+  <div id="tr"><div id="empty">Hutbe başlayınca aşağıdaki düğmeye bas. Hatip konuştukça Arapça metin altta, Türkçe meali burada akar. Telefonu ekran açık şekilde, sesi duyabileceği yerde tut.</div></div>
+</div>
+<div id="arWrap">
+  <p class="lbl" style="text-align:left">Arapça (canlı)</p>
+  <div id="ar"></div>
+</div>
+<footer>
+  <button id="go" type="button">Dinlemeye başla</button>
+  <button id="copy" type="button">Kopyala</button>
+</footer>
+<script>
+(function(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var $ = function(id){return document.getElementById(id)};
+  var trEl=$("tr"), arEl=$("ar"), st=$("st"), err=$("err"), go=$("go");
+  var running=false, rec=null, wake=null;
+  var finals=[];          // {ar, tr}
+  var interim="", liveTr="", liveTimer=null, liveSeq=0;
+
+  function showErr(m){err.textContent=m;err.style.display=m?"block":"none"}
+  if(!SR){showErr("Bu tarayıcı konuşma tanımayı desteklemiyor. iPhone'da bu sayfayı Safari ile aç (Chrome değil). Ayarlar › Siri'de dikte/Siri açık olmalı.");}
+
+  // Çeviri: önce Google'ın ücretsiz uç noktası, olmazsa MyMemory
+  function translate(text){
+    var q=encodeURIComponent(text);
+    return fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=tr&dt=t&q="+q)
+      .then(function(r){if(!r.ok)throw 0;return r.json()})
+      .then(function(j){return j[0].map(function(x){return x[0]}).join("")})
+      .catch(function(){
+        return fetch("https://api.mymemory.translated.net/get?langpair=ar|tr&q="+q)
+          .then(function(r){return r.json()})
+          .then(function(j){return j.responseData.translatedText});
+      });
+  }
+
+  function render(){
+    var h="";
+    finals.forEach(function(f){h+="<p>"+esc(f.tr||"…")+"</p>"});
+    if(liveTr) h+='<p class="live">'+esc(liveTr)+"</p>";
+    if(h) trEl.innerHTML=h;
+    var a=finals.slice(-6).map(function(f){return esc(f.ar)}).join(" ");
+    arEl.innerHTML=a+(interim?' <span class="i">'+esc(interim)+"</span>":"");
+    var w=$("trWrap"); w.scrollTop=w.scrollHeight;
+    var aw=$("arWrap"); aw.scrollTop=aw.scrollHeight;
+  }
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+
+  function commit(text){
+    text=(text||"").trim(); if(!text) return;
+    var item={ar:text,tr:""}; finals.push(item);
+    liveTr=""; render();
+    translate(text).then(function(t){item.tr=t;render();save()})
+      .catch(function(){item.tr="[çeviri alınamadı — internet?] ";render()});
+  }
+
+  function scheduleLive(){
+    clearTimeout(liveTimer);
+    liveTimer=setTimeout(function(){
+      var t=interim.trim(); if(t.length<8) return;
+      var my=++liveSeq;
+      translate(t).then(function(r){ if(my===liveSeq && interim){liveTr=r;render()} }).catch(function(){});
+    },1200);
+  }
+
+  function start(){
+    if(!SR) return;
+    rec=new SR();
+    rec.lang="ar-SA"; rec.continuous=true; rec.interimResults=true;
+    rec.onresult=function(e){
+      var im="";
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var r=e.results[i];
+        if(r.isFinal){ commit(r[0].transcript); }
+        else im+=r[0].transcript;
+      }
+      interim=im; render(); scheduleLive();
+      // iOS uzun süre "final" vermeyebilir: metin uzayınca oturumu kapatıp parçayı kesinleştir
+      if(interim.length>220){ try{rec.stop()}catch(_){} }
+    };
+    rec.onerror=function(e){
+      if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+        showErr("Mikrofon izni yok. Safari'de adres çubuğundaki “aA” › Web Sitesi Ayarları › Mikrofon › İzin Ver. Ayrıca Ayarlar › Siri'de dikte açık olmalı.");
+        stop();
+      } else if(e.error==="network"){
+        st.textContent="Bağlantı zayıf, tekrar deniyor…";
+      }
+    };
+    rec.onend=function(){
+      if(interim){commit(interim);interim="";}
+      if(running){ setTimeout(function(){ try{rec.start()}catch(_){start()} },150); }
+    };
+    try{rec.start()}catch(_){}
+  }
+
+  function stop(){
+    running=false; document.body.classList.remove("on");
+    go.textContent="Dinlemeye başla"; st.textContent="Durdu";
+    try{rec&&rec.stop()}catch(_){}
+    if(wake){wake.release().catch(function(){});wake=null}
+  }
+
+  go.onclick=function(){
+    if(running){stop();return}
+    showErr(SR?"":err.textContent);
+    if(!SR) return;
+    running=true; document.body.classList.add("on");
+    go.textContent="Durdur"; st.textContent="Dinliyor";
+    var e=$("empty"); if(e) e.remove();
+    if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){wake=w}).catch(function(){})}
+    start();
+  };
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible"&&running&&navigator.wakeLock&&!wake){
+      navigator.wakeLock.request("screen").then(function(w){wake=w}).catch(function(){});
+    }
+  });
+
+  $("copy").onclick=function(){
+    var txt="TÜRKÇE\n"+finals.map(function(f){return f.tr}).join("\n")+"\n\nARAPÇA\n"+finals.map(function(f){return f.ar}).join(" ");
+    var b=this;
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
+      .then(function(){b.textContent="Kopyalandı";setTimeout(function(){b.textContent="Kopyala"},1500)})
+      .catch(function(){showErr("Kopyalanamadı. Metni basılı tutup seçebilirsin.")});
+  };
+
+  // Sayfa yenilenirse metin kaybolmasın
+  function save(){try{localStorage.setItem("hutbe-"+new Date().toISOString().slice(0,10),JSON.stringify(finals))}catch(_){}}
+  try{var s=localStorage.getItem("hutbe-"+new Date().toISOString().slice(0,10)); if(s){finals=JSON.parse(s)||[]; if(finals.length){var e=$("empty");if(e)e.remove();render()}}}catch(_){}
+})();
+</script>
+</body>
+</html>
