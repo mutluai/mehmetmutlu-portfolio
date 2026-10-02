@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1714">
 <title>Hutbe Meali</title>
 <style>
-/* Tek ekran, karanlık: camide parlak ekran olmasın. Üstte Türkçe meal, altta Arapça canlı metin, en altta tek büyük düğme. */
+/* Tek ekran, karanlık: camide parlak ekran olmasın. Üstte Türkçe meal, altta Arapça canlı metin, en altta düğmeler. */
 :root{
   --bg:#0f1714; --panel:#16211d; --line:#26352f; --fg:#e8efe9; --muted:#8fa49a;
   --gold:#c9a75a; --live:#e0c27a; --rec:#c2554a;
@@ -27,19 +27,23 @@ body.on #dot{background:var(--rec);animation:p 1.4s infinite}
 @media (prefers-reduced-motion:reduce){body.on #dot{animation:none}}
 .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
 #trWrap{flex:1 1 60%;min-height:0;overflow-y:auto;padding-block:4px 12px}
-#tr p{font-size:19px;line-height:1.55;margin:0 0 12px}
-#tr p.live{color:var(--live);font-style:italic}
+#tr p{font-size:19px;line-height:1.55;margin:0 0 14px}
+#tr p.live{color:var(--live)}
+#tr b{color:var(--gold);font-weight:600}
 #empty{color:var(--muted);font-size:16px;line-height:1.55}
-#arWrap{flex:0 0 22%;min-height:0;overflow-y:auto;border-top:1px solid var(--line);padding-block:10px}
+#arWrap{flex:0 0 20%;min-height:0;overflow-y:auto;border-top:1px solid var(--line);padding-block:10px}
 #ar{font-family:var(--ar);direction:rtl;text-align:right;font-size:17px;line-height:1.8;color:var(--muted)}
 #ar .i{color:var(--live)}
 #err{display:none;background:#3a1f1c;color:#f3cfc9;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.45;margin-bottom:8px}
-footer{display:flex;gap:10px;padding-block:10px 14px}
-button{font:inherit;border:0;border-radius:14px;cursor:pointer}
-button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-#go{flex:1;background:var(--gold);color:#1a1408;font-size:18px;font-weight:700;padding:18px}
+footer{display:grid;grid-template-columns:1fr auto;gap:10px;padding-block:10px 14px}
+button,a.btn{font:inherit;border:0;border-radius:14px;cursor:pointer;text-decoration:none;text-align:center}
+button:focus-visible,a.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#go{background:var(--gold);color:#1a1408;font-size:18px;font-weight:700;padding:18px}
 body.on #go{background:var(--rec);color:#fff}
-#copy{background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:0 16px;font-size:14px}
+.sec{background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:12px 16px;font-size:14px}
+#side{display:grid;gap:8px}
+#claude{grid-column:1/-1;display:none}
+body.has #claude{display:block}
 </style>
 </head>
 <body>
@@ -50,15 +54,19 @@ body.on #go{background:var(--rec);color:#fff}
 <div id="err"></div>
 <div id="trWrap">
   <p class="lbl">Türkçe</p>
-  <div id="tr"><div id="empty">Hutbe başlayınca aşağıdaki düğmeye bas. Hatip konuştukça Arapça metin altta, Türkçe meali burada akar. Telefonu ekran açık şekilde, sesi duyabileceği yerde tut.</div></div>
+  <div id="tr"><div id="empty">Hutbe başlayınca aşağıdaki düğmeye bas. Hatip konuştukça Arapça metin altta, Türkçe meali burada paragraf paragraf akar. Altın renkli kısımlar hutbe kalıplarının hazır mealidir.</div></div>
 </div>
 <div id="arWrap">
-  <p class="lbl" style="text-align:left">Arapça (canlı)</p>
+  <p class="lbl">Arapça (canlı)</p>
   <div id="ar"></div>
 </div>
 <footer>
   <button id="go" type="button">Dinlemeye başla</button>
-  <button id="copy" type="button">Kopyala</button>
+  <div id="side">
+    <button id="copy" class="sec" type="button">Kopyala</button>
+    <button id="clear" class="sec" type="button">Temizle</button>
+  </div>
+  <a id="claude" class="btn sec" href="https://claude.ai/new" target="_blank" rel="noopener">Namazdan sonra: Claude ile anlamlı meal çıkar</a>
 </footer>
 <script>
 (function(){
@@ -66,14 +74,88 @@ body.on #go{background:var(--rec);color:#fff}
   var $ = function(id){return document.getElementById(id)};
   var trEl=$("tr"), arEl=$("ar"), st=$("st"), err=$("err"), go=$("go");
   var running=false, rec=null, wake=null;
-  var finals=[];          // {ar, tr}
-  var interim="", liveTr="", liveTimer=null, liveSeq=0;
+  var paras=[];               // {ar, tr, live, seq}
+  var interim="", liveTimer=null;
+  var PARA_MAX=380;           // bu kadar Arapça karakterden sonra yeni paragraf
 
   function showErr(m){err.textContent=m;err.style.display=m?"block":"none"}
-  if(!SR){showErr("Bu tarayıcı konuşma tanımayı desteklemiyor. iPhone'da bu sayfayı Safari ile aç (Chrome değil). Ayarlar › Siri'de dikte/Siri açık olmalı.");}
+  if(!SR){showErr("Bu tarayıcı konuşma tanımayı desteklemiyor. iPhone'da bu sayfayı Safari ile aç (Chrome değil). Ayarlar › Siri'de dikte açık olmalı.");}
 
-  // Çeviri: önce Google'ın ücretsiz uç noktası, olmazsa MyMemory
-  function translate(text){
+  // ---- Arapça normalize (harekeleri at, elif/ye/te-merbuta birleştir)
+  function norm(s){
+    return s.replace(/[\u064B-\u065F\u0670\u0640]/g,"")
+      .replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/ؤ/g,"و").replace(/ئ/g,"ي")
+      .replace(/[،؛؟.,!?]/g," ").replace(/\s+/g," ").trim();
+  }
+
+  // ---- Hutbe kalıpları: Google'ın bozduğu sabit ifadelere hazır meal (uzundan kısaya)
+  var F=[
+    ["ان الحمد لله نحمده ونستعينه ونستغفره","Hamd Allah'a mahsustur; O'na hamdeder, O'ndan yardım ve bağışlanma dileriz."],
+    ["ونعوذ بالله من شرور انفسنا ومن سييات اعمالنا","Nefislerimizin şerrinden ve amellerimizin kötülüklerinden Allah'a sığınırız."],
+    ["من يهده الله فلا مضل له ومن يضلل فلا هادي له","Allah kimi doğru yola iletirse onu kimse saptıramaz; kimi de saptırırsa onu kimse doğru yola getiremez."],
+    ["اشهد ان لا اله الا الله وحده لا شريك له","Şahitlik ederim ki Allah'tan başka ilah yoktur; O tektir, ortağı yoktur."],
+    ["واشهد ان محمدا عبده ورسوله","Ve şahitlik ederim ki Muhammed O'nun kulu ve elçisidir."],
+    ["اشهد ان محمدا عبده ورسوله","Şahitlik ederim ki Muhammed O'nun kulu ve elçisidir."],
+    ["صلي الله عليه وعلي اله وصحبه وسلم","Allah ona, ailesine ve ashabına salât ve selâm eylesin."],
+    ["صلي الله عليه وسلم","(s.a.v.)"],
+    ["ان الحمد والنعمه لك والملك لا شريك لك","Hamd de nimet de Senindir, mülk de Senindir; Senin ortağın yoktur."],
+    ["لبيك اللهم لبيك","Buyur Allah'ım, emrindeyim!"],
+    ["لبيك لا شريك لك لبيك","Emrindeyim; Senin ortağın yoktur, emrindeyim!"],
+    ["اقول قولي هذا واستغفر الله لي ولكم","Sözümü burada bitiriyor, kendim ve sizin için Allah'tan bağışlanma diliyorum."],
+    ["فاستغفروه انه هو الغفور الرحيم","O'ndan bağışlanma dileyin; şüphesiz O çok bağışlayan, çok merhamet edendir."],
+    ["فاستغفروه وتوبوا اليه","O'ndan bağışlanma dileyin ve O'na tövbe edin."],
+    ["بارك الله لي ولكم في القران العظيم","Allah bana ve size yüce Kur'an'ı mübarek kılsın."],
+    ["ونفعني واياكم بما فيه من الايات والذكر الحكيم","Ondaki âyetler ve hikmetli öğütlerle beni de sizi de faydalandırsın."],
+    ["ان الله وملايكته يصلون علي النبي","Şüphesiz Allah ve melekleri Peygamber'e salât eder (Ahzâb 56)."],
+    ["يا ايها الذين امنوا صلوا عليه وسلموا تسليما","Ey iman edenler, siz de ona salât edin ve tam bir teslimiyetle selâm verin."],
+    ["ان الله يامر بالعدل والاحسان","Şüphesiz Allah adaleti, iyiliği ve yakınlara yardımı emreder (Nahl 90)."],
+    ["فاذكروا الله العظيم يذكركم","Yüce Allah'ı anın ki O da sizi ansın."],
+    ["اعوذ بالله من الشيطان الرجيم","Kovulmuş şeytandan Allah'a sığınırım."],
+    ["بسم الله الرحمن الرحيم","Rahmân ve Rahîm olan Allah'ın adıyla."],
+    ["الحمد لله رب العالمين","Hamd, âlemlerin Rabbi Allah'a mahsustur."],
+    ["فاتقوا الله عباد الله","Ey Allah'ın kulları, Allah'tan sakının; takvaya sarılın."],
+    ["اتقوا الله حق تقاته","Allah'tan, O'na yaraşır şekilde sakının."],
+    ["اوصيكم ونفسي بتقوي الله","Size ve kendime Allah'a karşı takvalı olmayı tavsiye ederim."],
+    ["فاتقوا الله","Allah'tan sakının; takvaya sarılın."],
+    ["اتقوا الله","Allah'tan sakının."],
+    ["يا ايها الذين امنوا","Ey iman edenler,"],
+    ["يا ايها الناس","Ey insanlar,"],
+    ["معاشر المسلمين","Ey Müslümanlar topluluğu,"],
+    ["معشر المسلمين","Ey Müslümanlar topluluğu,"],
+    ["ايها المسلمون","Ey Müslümanlar,"],
+    ["ايها المومنون","Ey müminler,"],
+    ["عباد الله","Ey Allah'ın kulları,"],
+    ["اما بعد","Bundan sonra (asıl sözümüze gelince):"],
+    ["قال الله تعالي","Allah Teâlâ buyurur:"],
+    ["قال رسول الله","Resûlullah buyurdu:"],
+    ["قال النبي","Peygamber buyurdu:"],
+    ["رضي الله عنهم","(r.anhüm)"],["رضي الله عنها","(r.anhâ)"],["رضي الله عنه","(r.a.)"],
+    ["سبحانه وتعالي","(c.c.)"],["عز وجل","(c.c.)"],["جل وعلا","(c.c.)"],
+    ["اللهم اغفر للمسلمين والمسلمات","Allah'ım, Müslüman erkek ve kadınları bağışla."],
+    ["واقم الصلاه","Namazı dosdoğru kıl."]
+  ].map(function(f){return {re:new RegExp(f[0].split(" ").join("\\s+"),"g"),tr:f[1]}});
+
+  // Metni [düz parça / kalıp] diye böl
+  function splitFormulas(text){
+    var t=norm(text), hits=[];
+    F.forEach(function(f){
+      f.re.lastIndex=0; var m;
+      while((m=f.re.exec(t))){
+        var s=m.index,e=s+m[0].length;
+        if(!hits.some(function(h){return s<h.e&&e>h.s})) hits.push({s:s,e:e,tr:f.tr});
+      }
+    });
+    hits.sort(function(a,b){return a.s-b.s});
+    var out=[],pos=0;
+    hits.forEach(function(h){
+      if(h.s>pos) out.push({plain:t.slice(pos,h.s)});
+      out.push({fixed:h.tr}); pos=h.e;
+    });
+    if(pos<t.length) out.push({plain:t.slice(pos)});
+    return out.filter(function(p){return p.fixed||p.plain.trim().length>1});
+  }
+
+  function gtrans(text){
     var q=encodeURIComponent(text);
     return fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=tr&dt=t&q="+q)
       .then(function(r){if(!r.ok)throw 0;return r.json()})
@@ -85,33 +167,63 @@ body.on #go{background:var(--rec);color:#fff}
       });
   }
 
+  // Bütün paragrafı tek seferde çevir (bağlam korunsun), kalıpları hazır mealle doldur
+  function translate(text){
+    var parts=splitFormulas(text);
+    return Promise.all(parts.map(function(p){
+      return p.fixed ? Promise.resolve("<b>"+esc(p.fixed)+"</b>") : gtrans(p.plain).then(esc);
+    })).then(function(a){return a.join(" ")});
+  }
+
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+
+  function cur(){
+    var p=paras[paras.length-1];
+    if(!p||p.ar.length>PARA_MAX){p={ar:"",tr:"",live:"",seq:0};paras.push(p)}
+    return p;
+  }
+
   function render(){
+    if(!paras.length) return;
     var h="";
-    finals.forEach(function(f){h+="<p>"+esc(f.tr||"…")+"</p>"});
-    if(liveTr) h+='<p class="live">'+esc(liveTr)+"</p>";
-    if(h) trEl.innerHTML=h;
-    var a=finals.slice(-6).map(function(f){return esc(f.ar)}).join(" ");
-    arEl.innerHTML=a+(interim?' <span class="i">'+esc(interim)+"</span>":"");
+    paras.forEach(function(p,i){
+      var last=i===paras.length-1;
+      var txt=(last&&p.live)?p.live:p.tr;
+      if(!txt&&!p.ar) return;
+      h+='<p class="'+(last&&p.live?"live":"")+'">'+(txt||"…")+"</p>";
+    });
+    trEl.innerHTML=h;
+    var p=paras[paras.length-1];
+    arEl.innerHTML=esc(p?p.ar:"")+(interim?' <span class="i">'+esc(interim)+"</span>":"");
     var w=$("trWrap"); w.scrollTop=w.scrollHeight;
     var aw=$("arWrap"); aw.scrollTop=aw.scrollHeight;
+    document.body.classList.toggle("has",paras.some(function(p){return p.ar}));
+    updateClaudeLink();
   }
-  function esc(s){return String(s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+
+  function retranslate(p,extra,isLive){
+    var my=++p.seq, text=(p.ar+" "+(extra||"")).trim();
+    if(text.length<4) return;
+    translate(text).then(function(r){
+      if(my!==p.seq) return;          // daha yeni bir çeviri geldi
+      if(isLive){p.live=r} else {p.tr=r;p.live=""}
+      render(); if(!isLive) save();
+    }).catch(function(){ if(!isLive){p.tr=p.tr||"[çeviri alınamadı, internet?]";render()} });
+  }
 
   function commit(text){
     text=(text||"").trim(); if(!text) return;
-    var item={ar:text,tr:""}; finals.push(item);
-    liveTr=""; render();
-    translate(text).then(function(t){item.tr=t;render();save()})
-      .catch(function(){item.tr="[çeviri alınamadı — internet?] ";render()});
+    var p=cur();
+    p.ar=(p.ar+" "+text).trim();
+    render(); retranslate(p,"",false);
   }
 
   function scheduleLive(){
     clearTimeout(liveTimer);
     liveTimer=setTimeout(function(){
-      var t=interim.trim(); if(t.length<8) return;
-      var my=++liveSeq;
-      translate(t).then(function(r){ if(my===liveSeq && interim){liveTr=r;render()} }).catch(function(){});
-    },1200);
+      if(interim.trim().length<6) return;
+      retranslate(cur(),interim,true);
+    },1300);
   }
 
   function start(){
@@ -122,23 +234,19 @@ body.on #go{background:var(--rec);color:#fff}
       var im="";
       for(var i=e.resultIndex;i<e.results.length;i++){
         var r=e.results[i];
-        if(r.isFinal){ commit(r[0].transcript); }
-        else im+=r[0].transcript;
+        if(r.isFinal) commit(r[0].transcript); else im+=r[0].transcript;
       }
       interim=im; render(); scheduleLive();
-      // iOS uzun süre "final" vermeyebilir: metin uzayınca oturumu kapatıp parçayı kesinleştir
-      if(interim.length>220){ try{rec.stop()}catch(_){} }
+      if(interim.length>220){ try{rec.stop()}catch(_){} }   // iOS uzun süre kesinleştirmiyor
     };
     rec.onerror=function(e){
       if(e.error==="not-allowed"||e.error==="service-not-allowed"){
         showErr("Mikrofon izni yok. Safari'de adres çubuğundaki “aA” › Web Sitesi Ayarları › Mikrofon › İzin Ver. Ayrıca Ayarlar › Siri'de dikte açık olmalı.");
         stop();
-      } else if(e.error==="network"){
-        st.textContent="Bağlantı zayıf, tekrar deniyor…";
-      }
+      } else if(e.error==="network"){ st.textContent="Bağlantı zayıf, tekrar deniyor…"; }
     };
     rec.onend=function(){
-      if(interim){commit(interim);interim="";}
+      if(interim){var t=interim;interim="";commit(t)}
       if(running){ setTimeout(function(){ try{rec.start()}catch(_){start()} },150); }
     };
     try{rec.start()}catch(_){}
@@ -153,8 +261,8 @@ body.on #go{background:var(--rec);color:#fff}
 
   go.onclick=function(){
     if(running){stop();return}
-    showErr(SR?"":err.textContent);
     if(!SR) return;
+    showErr("");
     running=true; document.body.classList.add("on");
     go.textContent="Durdur"; st.textContent="Dinliyor";
     var e=$("empty"); if(e) e.remove();
@@ -167,17 +275,40 @@ body.on #go{background:var(--rec);color:#fff}
     }
   });
 
+  function plainTr(){var d=document.createElement("div");return paras.map(function(p){d.innerHTML=p.tr;return d.textContent}).join("\n\n")}
+  function arAll(){return paras.map(function(p){return p.ar}).join("\n")}
+
   $("copy").onclick=function(){
-    var txt="TÜRKÇE\n"+finals.map(function(f){return f.tr}).join("\n")+"\n\nARAPÇA\n"+finals.map(function(f){return f.ar}).join(" ");
-    var b=this;
+    var txt="TÜRKÇE\n"+plainTr()+"\n\nARAPÇA\n"+arAll(), b=this;
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
       .then(function(){b.textContent="Kopyalandı";setTimeout(function(){b.textContent="Kopyala"},1500)})
       .catch(function(){showErr("Kopyalanamadı. Metni basılı tutup seçebilirsin.")});
   };
+  var armed=false;
+  $("clear").onclick=function(){
+    var b=this;
+    if(!armed){armed=true;b.textContent="Emin misin?";setTimeout(function(){armed=false;b.textContent="Temizle"},2500);return}
+    armed=false;b.textContent="Temizle";paras=[];interim="";trEl.innerHTML="";arEl.innerHTML="";save();render();
+    document.body.classList.remove("has");
+  };
 
-  // Sayfa yenilenirse metin kaybolmasın
-  function save(){try{localStorage.setItem("hutbe-"+new Date().toISOString().slice(0,10),JSON.stringify(finals))}catch(_){}}
-  try{var s=localStorage.getItem("hutbe-"+new Date().toISOString().slice(0,10)); if(s){finals=JSON.parse(s)||[]; if(finals.length){var e=$("empty");if(e)e.remove();render()}}}catch(_){}
+  // Namazdan sonra: Arapça dökümü Claude'a hazır bir istemle gönder
+  function updateClaudeLink(){
+    var ar=arAll(); if(ar.length>5500) ar=ar.slice(0,5500);
+    var prompt="Aşağıda bugün Mescid-i Haram'daki cuma hutbesinin telefonla otomatik çıkarılmış Arapça dökümü var. "+
+      "Hoparlör yankısı yüzünden bazı kelimeler yanlış tanınmış olabilir; bağlamdan düzelt. "+
+      "Lütfen: 1) Hutbenin konusunu bir cümleyle söyle, 2) akıcı ve anlaşılır bir Türkçe meal yaz (kelime kelime değil, anlamca), "+
+      "3) geçen âyet ve hadisleri kaynağıyla belirt, 4) en sonda 3-4 maddelik özet ver.\n\nARAPÇA DÖKÜM:\n"+ar;
+    $("claude").href="https://claude.ai/new?q="+encodeURIComponent(prompt);
+  }
+
+  function key(){return "hutbe2-"+new Date().toISOString().slice(0,10)}
+  function save(){try{localStorage.setItem(key(),JSON.stringify(paras.map(function(p){return{ar:p.ar,tr:p.tr}})))}catch(_){}}
+  try{
+    var s=localStorage.getItem(key());
+    if(s){paras=(JSON.parse(s)||[]).map(function(p){return{ar:p.ar,tr:p.tr,live:"",seq:0}});
+      if(paras.length){var e=$("empty");if(e)e.remove();render()}}
+  }catch(_){}
 })();
 </script>
 </body>
